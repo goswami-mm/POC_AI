@@ -184,8 +184,11 @@ public class PersonDetectionClassifier implements Classifier {
         final ArrayList<Recognition> recognitions = new ArrayList<Recognition>();
         for (int i = 0; i < Math.min(pq.size(), MAX_RESULTS); ++i) {
             Recognition r = pq.poll();
-            if(r.getTitle().equalsIgnoreCase("person"))
-                recognitions.add(pq.poll());
+            if(r.getTitle().contains("person")) {
+                recognitions.add(r);
+                LOGGER.e("added %s", r.getTitle());
+            } else
+                LOGGER.e("ignoring %s", r.getTitle());
         }
         Trace.endSection(); // "recognizeImage"
         return recognitions;

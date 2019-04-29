@@ -10,6 +10,7 @@ import android.graphics.Typeface;
 import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
 import android.widget.Toast;
@@ -74,7 +75,7 @@ public class MotionDetectionActivity extends CameraActivity1 implements ImageRea
     private static final DetectorMode MODE = DetectorMode.TF_OD_API;
 
     // Minimum detection confidence to track a detection.
-    private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.6f;
+    private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.3f;
     private static final float MINIMUM_CONFIDENCE_MULTIBOX = 0.1f;
     private static final float MINIMUM_CONFIDENCE_YOLO = 0.25f;
 
@@ -102,9 +103,7 @@ public class MotionDetectionActivity extends CameraActivity1 implements ImageRea
     private Matrix frameToCropTransform;
     private Matrix cropToFrameTransform;
 
-    private MultiBoxTracker tracker;
-    private MultiMovementTracker movementTracker;
-//    private MultiBoxTracker trackerFace;
+    private MultiMovementTracker tracker;
 
     private byte[] luminanceCopy;
 
@@ -117,9 +116,7 @@ public class MotionDetectionActivity extends CameraActivity1 implements ImageRea
         borderedText = new BorderedText(textSizePx);
         borderedText.setTypeface(Typeface.MONOSPACE);
 
-        tracker = new MultiBoxTracker(this);
-        movementTracker = new MultiMovementTracker();
-//        trackerFace = new MultiBoxTracker(this);
+        tracker = new MultiMovementTracker(this);
 
         int cropSize = TF_OD_API_INPUT_SIZE;
         if (MODE == DetectorMode.YOLO) {
@@ -182,7 +179,6 @@ public class MotionDetectionActivity extends CameraActivity1 implements ImageRea
         trackingOverlay.addCallback(
                 canvas -> {
                     tracker.draw(canvas);
-                    movementTracker.draw(canvas);
 //                    trackerFace.draw(canvas);
                     if (isDebug()) {
                         tracker.drawDebug(canvas);
@@ -310,25 +306,29 @@ public class MotionDetectionActivity extends CameraActivity1 implements ImageRea
                                 new LinkedList<Classifier.Recognition>();
 
                         for (final Classifier.Recognition result : results) {
+                            LOGGER.e("detected %s", result);
                             final RectF location = result.getLocation();
-                            if (location != null && result.getConfidence() >= minimumConfidence) {
+                            if (location != null && result.getConfidence() >= minimumConfidence
+                                    && (result.getTitle().contains("person") || result.getTitle().contains("person"))) {
                                 canvas.drawRect(location, paint);
 
                                 cropToFrameTransform.mapRect(location);
                                 result.setLocation(location);
-                                final List<Classifier.Recognition> faceResults =
-                                        detectorFace.recognizeImage(
-                                                getCropedBitMap(cropCopyBitmap, location),
-                                                cropToFrameTransform);
-                                for (final Classifier.Recognition faceResult : faceResults) {
-                                    result.setTitle(faceResult.getTitle());
-                                    mappedRecognitions.add(result);
-                                }
+//                                final List<Classifier.Recognition> faceResults =
+//                                        detectorFace.recognizeImage(
+//                                                getCropedBitMap(cropCopyBitmap, location),
+//                                                cropToFrameTransform);
+//                                for (final Classifier.Recognition faceResult : faceResults) {
+//                                    result.setTitle(faceResult.getTitle());
+//                                }
+                                LOGGER.e("added %s", result.getTitle());
+                                mappedRecognitions.add(result);
+                            } else {
+                                LOGGER.e( "ignore result %s ",result.getTitle());
                             }
                         }
 
                         tracker.trackResults(mappedRecognitions, luminanceCopy, currTimestamp);
-                        movementTracker.addNewResult(mappedRecognitions);
                         trackingOverlay.postInvalidate();
 
                         requestRender();
